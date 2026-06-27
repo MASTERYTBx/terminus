@@ -38,7 +38,9 @@ import {
   FileText,
   Printer,
   Fingerprint,
-  ShieldAlert
+  ShieldAlert,
+  Menu,
+  X
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { supabase } from "../lib/supabase";
@@ -135,6 +137,7 @@ export default function Home() {
   // ==========================================
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [dbStatus, setDbStatus] = useState<"connecting" | "synced" | "local">("connecting");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
@@ -2035,8 +2038,8 @@ Powered by Terminus™`;
         </div>
       )}
 
-      {/* LEFT NAVIGATION MENU (FIXED SIDEBAR) */}
-      <aside className="w-56 bg-zinc-950 border-r border-zinc-900 flex flex-col shrink-0">
+      {/* LEFT NAVIGATION MENU (FIXED SIDEBAR - DESKTOP ONLY) */}
+      <aside className="hidden md:flex w-56 bg-zinc-950 border-r border-zinc-900 flex flex-col shrink-0">
         
         {/* Workspace Dropdown Switcher Header */}
         <div className="p-3 border-b border-zinc-900/60 relative">
@@ -2216,13 +2219,249 @@ Powered by Terminus™`;
         </div>
       </aside>
 
+      {/* MOBILE NAVIGATION SIDEBAR DRAWER */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          
+          {/* Drawer content */}
+          <aside className="relative w-64 max-w-xs bg-zinc-950 border-r border-zinc-900 flex flex-col h-full z-10 animate-in slide-in-from-left duration-200">
+            {/* Close Button & Title */}
+            <div className="p-3 border-b border-zinc-900 flex items-center justify-between bg-zinc-950">
+              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider font-mono">Navigation</span>
+              <button 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-900"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Workspace Dropdown Switcher */}
+            <div className="p-3 border-b border-zinc-900/60 relative">
+              <button
+                type="button"
+                onClick={() => setIsWsDropdownOpen(!isWsDropdownOpen)}
+                className="w-full flex items-center justify-between gap-1.5 bg-zinc-900/30 hover:bg-zinc-900/70 border border-zinc-850 px-2.5 py-1.5 rounded-lg text-left transition-all"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="h-6 w-6 rounded bg-purple-650 flex items-center justify-center text-zinc-955 font-bold font-mono text-xs shrink-0 shadow-sm">
+                    {activeWorkspace?.name.charAt(0) || "T"}
+                  </div>
+                  <div className="flex flex-col min-w-0 leading-tight">
+                    <span className="text-[11px] font-bold text-white truncate font-sans">{activeWorkspace?.name || "Terminus"}</span>
+                    <span className="text-[8px] text-zinc-500 font-semibold uppercase tracking-wider font-mono truncate">{activeWorkspace?.niche || "Niche"}</span>
+                  </div>
+                </div>
+                <span className="text-zinc-500 text-[10px] shrink-0">▼</span>
+              </button>
+
+              {isWsDropdownOpen && (
+                <div className="absolute top-full left-3 right-3 z-50 mt-1 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl overflow-hidden p-1 flex flex-col gap-0.5">
+                  <div className="text-[8px] text-zinc-500 uppercase tracking-widest font-bold font-mono px-2 py-1 select-none">
+                    Switch Business
+                  </div>
+                  {allowedWorkspaces.map(ws => (
+                    <button
+                      key={ws.id}
+                      type="button"
+                      onClick={() => {
+                        setCurrentWorkspaceId(ws.id);
+                        localStorage.setItem("terminus_active_workspace_id", ws.id);
+                        setIsWsDropdownOpen(false);
+                        setIsMobileMenuOpen(false);
+                        triggerToast(`Swapped to ${ws.name}`);
+                      }}
+                      className={`w-full flex items-center justify-between text-left text-xs px-2.5 py-1.5 rounded transition-colors ${
+                        ws.id === currentWorkspaceId
+                          ? "bg-purple-950/20 text-purple-400 border border-purple-500/20"
+                          : "text-zinc-400 hover:text-white hover:bg-zinc-800/40"
+                      }`}
+                    >
+                      <span className="font-semibold truncate text-[11px]">{ws.name}</span>
+                      <span className="text-[8px] text-zinc-650 font-mono shrink-0 font-semibold">{ws.id}</span>
+                    </button>
+                  ))}
+
+                  <div className="border-t border-zinc-850/80 my-1" />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentWorkspaceId(null);
+                      localStorage.removeItem("terminus_active_workspace_id");
+                      setIsWsDropdownOpen(false);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-1.5 text-left text-xs text-zinc-355 hover:text-white hover:bg-zinc-800/40 px-2.5 py-1.5 rounded transition-colors font-mono"
+                  >
+                    <span>🏢 Hub Directory</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsWsDropdownOpen(false);
+                      setIsMobileMenuOpen(false);
+                      setCurrentWorkspaceId(null);
+                      localStorage.removeItem("terminus_active_workspace_id");
+                      setIsWorkspaceCreateOpen(true);
+                    }}
+                    className="w-full flex items-center gap-1.5 text-left text-xs text-purple-450 hover:text-purple-305 hover:bg-zinc-800/40 px-2.5 py-1.5 rounded transition-colors font-mono"
+                  >
+                    <span>➕ Create Business</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full flex items-center gap-1.5 text-left text-xs text-rose-455 hover:text-rose-400 hover:bg-zinc-800/40 px-2.5 py-1.5 rounded transition-colors font-mono"
+                  >
+                    <span>🚪 Log Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Navigation inside mobile drawer */}
+            <nav className="flex-1 p-3 flex flex-col gap-1 overflow-y-auto">
+              <button
+                onClick={() => {
+                  setActiveTab("dashboard");
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                  activeTab === "dashboard"
+                    ? "bg-zinc-900 text-white border border-zinc-800 shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/40"
+                }`}
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                <span>Dashboard Overview</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab("orders");
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                  activeTab === "orders"
+                    ? "bg-zinc-900 text-white border border-zinc-800 shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/40"
+                }`}
+              >
+                <ShoppingBag className="h-4 w-4" />
+                <span>Orders Slip Engine</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab("customers");
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                  activeTab === "customers"
+                    ? "bg-zinc-900 text-white border border-zinc-800 shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/40"
+                }`}
+              >
+                <Users className="h-4 w-4" />
+                <span>Customers (CRM)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab("stock");
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                  activeTab === "stock"
+                    ? "bg-zinc-900 text-white border border-zinc-800 shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/40"
+                }`}
+              >
+                <Boxes className="h-4 w-4" />
+                <span>Stock Manager (ERP)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab("recovery");
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                  activeTab === "recovery"
+                    ? "bg-zinc-900 text-white border border-zinc-800 shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/40"
+                }`}
+              >
+                <RefreshCw className="h-4 w-4" />
+                <span>Recovery Hub</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab("settings");
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                  activeTab === "settings"
+                    ? "bg-zinc-900 text-white border border-zinc-800 shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/40"
+                }`}
+              >
+                <SettingsIcon className="h-4 w-4" />
+                <span>Settings</span>
+              </button>
+
+              {sessionUser?.role === "Admin" && (
+                <button
+                  onClick={() => {
+                    setActiveTab("accounts");
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                    activeTab === "accounts"
+                      ? "bg-zinc-900 text-white border border-zinc-800 shadow-sm"
+                      : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/40"
+                  }`}
+                >
+                  <Fingerprint className="h-4 w-4 text-purple-400" />
+                  <span>Account Management</span>
+                </button>
+              )}
+            </nav>
+
+            <div className="p-4 border-t border-zinc-900 text-[10px] text-zinc-600 font-mono flex flex-col gap-1 bg-zinc-950/80">
+              <span>Active: {shopName}</span>
+              <span>COD Mode enabled</span>
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* MAIN VIEW CONTENT CONTAINER */}
       <div className="flex-1 flex flex-col min-w-0 bg-zinc-950 overflow-hidden">
         
         {/* HEADER BAR */}
-        <header className="h-14 border-b border-zinc-900 flex items-center justify-between px-6 bg-zinc-950/40 backdrop-blur-md">
+        <header className="h-14 border-b border-zinc-900 flex items-center justify-between px-4 md:px-6 bg-zinc-950/40 backdrop-blur-md">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-zinc-500 font-mono capitalize">Navigation /</span>
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="md:hidden p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-900 focus:outline-none"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <span className="text-xs text-zinc-500 font-mono capitalize hidden sm:inline">Navigation /</span>
             <span className="text-xs text-zinc-200 font-medium capitalize font-mono">{activeTab}</span>
           </div>
           <div className="flex items-center gap-4">
@@ -2516,7 +2755,7 @@ Powered by Terminus™`;
               )}
 
               {/* MAIN DATA GRID TABLE */}
-              <div className="bg-zinc-900/30 border border-zinc-900 rounded-xl overflow-hidden shadow-sm">
+              <div className="bg-zinc-900/30 border border-zinc-900 rounded-xl overflow-x-auto shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-zinc-900 text-[10px] text-zinc-500 font-semibold bg-zinc-900/50 uppercase tracking-wider">
@@ -2694,7 +2933,7 @@ Powered by Terminus™`;
               </div>
 
               {/* CUSTOMERS DATA TABLE */}
-              <div className="bg-zinc-900/30 border border-zinc-900 rounded-xl overflow-hidden shadow-sm">
+              <div className="bg-zinc-900/30 border border-zinc-900 rounded-xl overflow-x-auto shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-zinc-900 text-[10px] text-zinc-500 font-semibold bg-zinc-900/50 uppercase tracking-wider">
@@ -2945,7 +3184,7 @@ Powered by Terminus™`;
               </div>
 
               {/* INVENTORY ERP DATA GRID */}
-              <div className="bg-zinc-900/30 border border-zinc-900 rounded-xl overflow-hidden shadow-sm">
+              <div className="bg-zinc-900/30 border border-zinc-900 rounded-xl overflow-x-auto shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-zinc-900 text-[10px] text-zinc-500 font-semibold bg-zinc-900/50 uppercase tracking-wider">
@@ -3086,7 +3325,7 @@ Powered by Terminus™`;
               </div>
 
               {/* LIST TABLE */}
-              <div className="bg-zinc-900/30 border border-zinc-900 rounded-xl overflow-hidden shadow-sm">
+              <div className="bg-zinc-900/30 border border-zinc-900 rounded-xl overflow-x-auto shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-zinc-900 text-[10px] text-zinc-500 font-semibold bg-zinc-900/50 uppercase tracking-wider">
